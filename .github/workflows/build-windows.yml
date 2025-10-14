@@ -1,0 +1,64 @@
+name: Build Flutter Windows App (Optimized)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Cache Flutter SDK
+      - name: Cache Flutter SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\flutter
+          key: flutter-${{ runner.os }}-${{ hashFiles('.github/workflows/build-windows.yml') }}
+          restore-keys: |
+            flutter-${{ runner.os }}-
+
+      # 3️⃣ Set up Flutter (will reuse cached SDK if exists)
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"
+          channel: "stable"
+
+      # 4️⃣ Cache pub dependencies
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\Users\runneradmin\AppData\Local\Pub\Cache
+            .dart_tool
+            build
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.yaml') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
+      # 5️⃣ Get dependencies
+      - name: Get dependencies
+        run: flutter pub get
+
+      # 6️⃣ Enable Windows desktop
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      # 7️⃣ Build Windows release (optimized)
+      - name: Build Windows release
+        run: flutter build windows --release --split-debug-info=build/symbols --obfuscate
+
+      # 8️⃣ Upload .exe build artifact
+      - name: Upload artifact (.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: koperasi-windows-exe
+          path: build/windows/x64/runner/Release/
